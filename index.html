@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Profile Schematic — GitHub Fetcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F2A47;
+    --bg-deep: #0A1F38;
+    --grid-line: rgba(140, 190, 230, 0.12);
+    --grid-line-strong: rgba(140, 190, 230, 0.22);
+    --paper: #EAF2FB;
+    --slate: #7C93AC;
+    --amber: #FFB74D;
+    --amber-dim: rgba(255, 183, 77, 0.35);
+    --danger: #FF8A80;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px);
+    background-size: 16px 16px, 16px 16px, 80px 80px, 80px 80px;
+    color: var(--paper);
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 32px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .masthead {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 28px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--slate);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    width: 100%;
+    max-width: 620px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+    margin: 0 0 4px;
+  }
+
+  h1 span { color: var(--amber); }
+
+  .subhead {
+    width: 100%;
+    max-width: 620px;
+    font-size: 13px;
+    color: var(--slate);
+    margin-bottom: 24px;
+  }
+
+  form {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--grid-line-strong);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px var(--amber-dim);
+  }
+
+  input[type="text"]::placeholder { color: var(--slate); }
+
+  button {
+    background: var(--amber);
+    color: var(--bg-deep);
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  button:hover { opacity: 0.88; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .status {
+    width: 100%;
+    max-width: 620px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--slate);
+    min-height: 20px;
+    margin-bottom: 8px;
+  }
+
+  .status.error { color: var(--danger); }
+
+  .sheet {
+    width: 100%;
+    max-width: 620px;
+    position: relative;
+    border: 1px solid var(--grid-line-strong);
+    background: rgba(10, 31, 56, 0.55);
+    backdrop-filter: blur(2px);
+    padding: 28px;
+    display: none;
+  }
+
+  .sheet.visible { display: block; animation: reveal 0.35s ease; }
+
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .crop {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--amber);
+  }
+  .crop.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .crop.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+  .crop.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+  .crop.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+  .sheet-header {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--grid-line-strong);
+    margin-bottom: 20px;
+  }
+
+  .avatar-frame {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+  }
+
+  .avatar-frame img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid var(--amber-dim);
+    display: block;
+  }
+
+  .avatar-frame::before,
+  .avatar-frame::after {
+    content: '';
+    position: absolute;
+    background: var(--amber-dim);
+  }
+  .avatar-frame::before { top: 50%; left: -10px; width: 8px; height: 1px; }
+  .avatar-frame::after { top: -10px; left: 50%; width: 1px; height: 8px; }
+
+  .identity .name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    margin: 0 0 2px;
+  }
+
+  .identity .login {
+    color: var(--amber);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  .identity .bio {
+    font-size: 13px;
+    color: var(--slate);
+    margin: 8px 0 0;
+    line-height: 1.5;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--slate);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .meta-row a { color: var(--slate); }
+
+  .field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 10px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--grid-line-strong);
+    border: 1px solid var(--grid-line-strong);
+    margin-bottom: 24px;
+  }
+
+  .stat {
+    background: var(--bg-deep);
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .stat .value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--amber);
+  }
+
+  .stat .label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-top: 4px;
+  }
+
+  .section { margin-bottom: 22px; }
+  .section:last-child { margin-bottom: 0; }
+
+  .lang-bars { display: flex; flex-direction: column; gap: 8px; }
+
+  .lang-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 24px;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  .lang-track {
+    height: 6px;
+    background: var(--bg-deep);
+    border: 1px solid var(--grid-line-strong);
+  }
+
+  .lang-fill { height: 100%; background: var(--amber); }
+
+  .repo-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .repo-row {
+    display: block;
+    text-decoration: none;
+    color: var(--paper);
+    border-left: 2px solid var(--amber-dim);
+    padding-left: 12px;
+    transition: border-color 0.15s ease;
+  }
+
+  .repo-row:hover { border-color: var(--amber); }
+
+  .repo-row .top {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .repo-row .stars { color: var(--amber); font-weight: 400; }
+
+  .repo-row .desc {
+    font-size: 12px;
+    color: var(--slate);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  footer {
+    width: 100%;
+    max-width: 620px;
+    margin-top: 40px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--slate);
+    text-align: center;
+  }
+
+  @media (max-width: 480px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .sheet { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="masthead">
+    <span>SCHEMATIC / GITHUB-PROFILE</span>
+    <span id="rev">REV. 1</span>
+  </div>
+
+  <h1>Profile <span>Schematic</span></h1>
+  <p class="subhead">Pull a GitHub account's public stats into a single spec sheet.</p>
+
+  <form id="lookup-form">
+    <input type="text" id="username-input" placeholder="e.g. torvalds" autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <button type="submit" id="submit-btn">Fetch</button>
+  </form>
+
+  <p class="status" id="status"></p>
+
+  <div class="sheet" id="sheet">
+    <span class="crop tl"></span><span class="crop tr"></span>
+    <span class="crop bl"></span><span class="crop br"></span>
+
+    <div class="sheet-header">
+      <div class="avatar-frame">
+        <img id="avatar" src="" alt="" />
+      </div>
+      <div class="identity">
+        <p class="name" id="name"></p>
+        <p class="login" id="login"></p>
+        <p class="bio" id="bio"></p>
+        <div class="meta-row" id="meta"></div>
+      </div>
+    </div>
+
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <div class="section" id="lang-section">
+      <p class="field-label">Top Languages</p>
+      <div class="lang-bars" id="lang-bars"></div>
+    </div>
+
+    <div class="section" id="repo-section">
+      <p class="field-label">Top Repositories, By Stars</p>
+      <div class="repo-list" id="repo-list"></div>
+    </div>
+  </div>
+
+  <footer>Data via the public GitHub REST API. No auth stored client-side.</footer>
+
+<script>
+  const form = document.getElementById('lookup-form');
+  const input = document.getElementById('username-input');
+  const statusEl = document.getElementById('status');
+  const sheet = document.getElementById('sheet');
+  const submitBtn = document.getElementById('submit-btn');
+
+  function fmt(n) {
+    if (n === null || n === undefined) return '0';
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return String(n);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  async function fetchProfile(username) {
+    statusEl.textContent = 'Querying api.github.com...';
+    statusEl.classList.remove('error');
+    sheet.classList.remove('visible');
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch(`/api/profile/${encodeURIComponent(username)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Lookup failed');
+      }
+
+      renderProfile(data);
+      statusEl.textContent = `Resolved ${data.login} — ${new Date().toLocaleTimeString()}`;
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.classList.add('error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  function renderProfile(data) {
+    document.getElementById('avatar').src = data.avatarUrl || '';
+    document.getElementById('avatar').alt = data.login;
+    document.getElementById('name').textContent = data.name || data.login;
+    document.getElementById('login').textContent = '@' + data.login;
+    document.getElementById('bio').textContent = data.bio || '';
+    document.getElementById('bio').style.display = data.bio ? 'block' : 'none';
+
+    const metaParts = [];
+    if (data.company) metaParts.push(escapeHtml(data.company));
+    if (data.location) metaParts.push(escapeHtml(data.location));
+    if (data.blog) metaParts.push(`<a href="${escapeHtml(data.blog)}" target="_blank" rel="noopener">${escapeHtml(data.blog)}</a>`);
+    metaParts.push(`<a href="${data.profileUrl}" target="_blank" rel="noopener">view on github →</a>`);
+    document.getElementById('meta').innerHTML = metaParts.join(' &nbsp;·&nbsp; ');
+
+    const stats = [
+      { label: 'Repos', value: fmt(data.publicRepos) },
+      { label: 'Followers', value: fmt(data.followers) },
+      { label: 'Stars', value: fmt(data.totalStars) },
+      { label: 'Forks', value: fmt(data.totalForks) },
+    ];
+    document.getElementById('stat-grid').innerHTML = stats.map(s => `
+      <div class="stat">
+        <div class="value">${s.value}</div>
+        <div class="label">${s.label}</div>
+      </div>
+    `).join('');
+
+    const langSection = document.getElementById('lang-section');
+    if (data.topLanguages && data.topLanguages.length) {
+      const maxCount = data.topLanguages[0].count;
+      document.getElementById('lang-bars').innerHTML = data.topLanguages.map(l => `
+        <div class="lang-row">
+          <span>${escapeHtml(l.name)}</span>
+          <div class="lang-track"><div class="lang-fill" style="width:${(l.count / maxCount) * 100}%"></div></div>
+          <span>${l.count}</span>
+        </div>
+      `).join('');
+      langSection.style.display = 'block';
+    } else {
+      langSection.style.display = 'none';
+    }
+
+    const repoSection = document.getElementById('repo-section');
+    if (data.topRepos && data.topRepos.length) {
+      document.getElementById('repo-list').innerHTML = data.topRepos.map(r => `
+        <a class="repo-row" href="${r.url}" target="_blank" rel="noopener">
+          <div class="top">
+            <span>${escapeHtml(r.name)}</span>
+            <span class="stars">★ ${fmt(r.stars)}</span>
+          </div>
+          ${r.description ? `<div class="desc">${escapeHtml(r.description)}</div>` : ''}
+        </a>
+      `).join('');
+      repoSection.style.display = 'block';
+    } else {
+      repoSection.style.display = 'none';
+    }
+
+    sheet.classList.add('visible');
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = input.value.trim();
+    if (!username) {
+      statusEl.textContent = 'Enter a username first.';
+      statusEl.classList.add('error');
+      return;
+    }
+    fetchProfile(username);
+  });
+</script>
+
+</body>
+</html>
