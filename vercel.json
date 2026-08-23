@@ -1,5 +1,0 @@
-{
-  "functions": {
-    "api/profile/[username].js": { "runtime": "nodejs20.x" }
-  }
-}
