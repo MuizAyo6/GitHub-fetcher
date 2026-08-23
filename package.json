@@ -3,7 +3,4 @@
   "version": "1.0.0",
   "description": "Fetch and display a GitHub user's profile stats via the GitHub REST API, deployed on Vercel",
   "private": true
-  "engines":{
-    "node": "20px"
-  }
 }
