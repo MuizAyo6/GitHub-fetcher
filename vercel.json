@@ -1,6 +1,5 @@
 {
   "functions": {
-    "api/*.php": { "runtime": "vercel-php@0.7.3" },
     "api/profile/[username].js": { "runtime": "nodejs20.x" }
   }
 }
